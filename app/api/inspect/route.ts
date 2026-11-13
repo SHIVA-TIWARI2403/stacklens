@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
 
     let response: Response;
     try {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeout);
       const isAbort = fetchErr?.name === 'AbortError';
       return NextResponse.json(
-        { error: isAbort ? 'Website took too long to respond (timeout 10s).' : `Could not reach target website: ${fetchErr?.message || 'Connection failed'}` },
+        { error: isAbort ? 'Website took too long to respond (timeout 25s). The target server might be slow or rate-limiting.' : `Could not reach target website: ${fetchErr?.message || 'Connection failed'}` },
         { status: 502 }
       );
     } finally {
