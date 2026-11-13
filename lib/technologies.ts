@@ -455,6 +455,45 @@ export const TECHNOLOGY_DATABASE: TechRule[] = [
     ],
     cookies: [
       { pattern: /ak_bmsc|_abck|bm_sz/i, reason: 'Akamai Bot Manager security cookie found' }
+    ],
+    csp: [
+      { pattern: /akamaized\.net|akamai\.net/i, reason: 'Akamai edge network authorized in Content Security Policy' }
+    ]
+  },
+  {
+    name: 'Apple Web Server',
+    category: 'server',
+    description: 'Apple proprietary high-security web server infrastructure and reverse proxy.',
+    website: 'https://apple.com',
+    icon: '🍏',
+    color: 'bg-zinc-800 text-white border-zinc-700',
+    headers: [
+      { key: 'server', valueRegex: /^Apple$/i, reason: 'Server header explicitly declares "Server: Apple"' }
+    ]
+  },
+  {
+    name: 'Apple Design System (ac-components)',
+    category: 'frontend',
+    description: 'Apple in-house enterprise web component architecture and Marcom framework.',
+    website: 'https://apple.com',
+    icon: '🍏',
+    color: 'bg-zinc-900 text-zinc-200 border-zinc-700',
+    html: [
+      { pattern: /ac-globalheader|cdn-apple\.com|data-analytics-region/i, reason: 'Apple proprietary UI framework ("ac-globalheader") detected' }
+    ],
+    csp: [
+      { pattern: /cdn-apple\.com|mzstatic\.com/i, reason: 'Apple official CDN endpoints authorized in CSP' }
+    ]
+  },
+  {
+    name: 'Apple MapKit JS',
+    category: 'analytics',
+    description: 'Apple native mapping and geolocation SDK for web applications.',
+    website: 'https://developer.apple.com/maps/mapkitjs/',
+    icon: '🗺️',
+    color: 'bg-emerald-600/10 text-emerald-400 border-emerald-500/20',
+    csp: [
+      { pattern: /apple-mapkit\.com/i, reason: 'Apple MapKit JS allowed in Content Security Policy' }
     ]
   },
   {
