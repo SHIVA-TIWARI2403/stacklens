@@ -23,7 +23,12 @@
 
 ## ⚡ Key Capabilities
 
-### 🕵️ 1. Multi-Layer Forensic Detection
+### ⚔️ 1. Side-by-Side Compare Mode (Stack Battle Arena)
+* Compare any two websites simultaneously (e.g. `Zomato vs Swiggy`, `Flipkart vs Amazon`, `Vercel vs Netlify`).
+* Head-to-Head metrics: Security defense winner, server response speed, and total tech footprint.
+* Category-by-category stack matrix and parallel AI architecture verdicts.
+
+### 🕵️ 2. Multi-Layer Forensic Detection
 * **HTTP Response Headers:** Server disclosure banners, `X-Powered-By`, reverse proxies, and caching layers (Cloudflare, Akamai, Varnish, Fastly).
 * **Cookie Signatures:** Detects backend session states (`PHPSESSID` for PHP, `JSESSIONID` for Java, `csrftoken` for Django/Python, `connect.sid` for Express/Node.js, `ak_bmsc` for Akamai Bot Manager).
 * **Content-Security-Policy (CSP) Mining:** Deconstructs modern CSP policies to discover private APIs, WebSockets, cloud analytics, and payment gateways (Stripe, Razorpay, Paytm, Google Maps, New Relic, Datadog).

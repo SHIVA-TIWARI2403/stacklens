@@ -4,43 +4,41 @@ import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import TechCard from '@/components/TechCard';
 import ArchitectureBreakdown from '@/components/ArchitectureBreakdown';
-import { Search, Globe, ArrowRight, Loader2, AlertCircle, Clock, CheckCircle, ShieldAlert, Sparkles, Shield, Binary, Eye, Lock } from 'lucide-react';
+import CompareView, { ScanResult } from '@/components/CompareView';
+import { Search, Globe, ArrowRight, Loader2, AlertCircle, Clock, CheckCircle, ShieldAlert, Sparkles, Shield, Binary, Eye, Lock, Swords, LayoutList } from 'lucide-react';
 import { DetectedTech } from '@/lib/technologies';
 import { ArchitectureSummary } from '@/lib/gemini';
 
-interface ReconData {
-  securityScore: number;
-  grade: string;
-  clues: string[];
-  cookiesCount: number;
-  scriptsCount: number;
-}
-
-interface ScanResult {
-  url: string;
-  hostname: string;
-  status: number;
-  scanTimeMs: number;
-  totalDetected: number;
-  detected: DetectedTech[];
-  categories: Record<string, DetectedTech[]>;
-  architecture: ArchitectureSummary;
-  recon: ReconData;
-}
-
 export default function Home() {
+  const [viewMode, setViewMode] = useState<'single' | 'compare'>('single');
+
+  // Single Mode States
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
+  // Compare Mode States
+  const [urlA, setUrlA] = useState('');
+  const [urlB, setUrlB] = useState('');
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareError, setCompareError] = useState<string | null>(null);
+  const [compareResults, setCompareResults] = useState<{ siteA: ScanResult; siteB: ScanResult } | null>(null);
+
   const popularSites = [
     { name: 'Flipkart', url: 'flipkart.com' },
     { name: 'Vercel', url: 'vercel.com' },
-    { name: 'WordPress', url: 'wordpress.org' },
+    { name: 'Apple', url: 'apple.com' },
     { name: 'Shopify', url: 'shopify.com' },
     { name: 'Netflix', url: 'netflix.com' }
+  ];
+
+  const popularBattles = [
+    { name: 'Zomato vs Swiggy', a: 'zomato.com', b: 'swiggy.com' },
+    { name: 'Flipkart vs Amazon', a: 'flipkart.com', b: 'amazon.in' },
+    { name: 'Vercel vs Netlify', a: 'vercel.com', b: 'netlify.com' },
+    { name: 'Netflix vs Spotify', a: 'netflix.com', b: 'spotify.com' }
   ];
 
   const handleScan = async (targetUrl?: string) => {
@@ -78,6 +76,57 @@ export default function Home() {
     }
   };
 
+  const handleCompare = async (targetA?: string, targetB?: string) => {
+    const finalA = (targetA || urlA).trim();
+    const finalB = (targetB || urlB).trim();
+
+    if (!finalA || !finalB) {
+      setCompareError('Please enter both website URLs to compare.');
+      return;
+    }
+
+    setCompareLoading(true);
+    setCompareError(null);
+    if (targetA) setUrlA(targetA);
+    if (targetB) setUrlB(targetB);
+
+    try {
+      const [resA, resB] = await Promise.all([
+        fetch('/api/inspect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: finalA })
+        }),
+        fetch('/api/inspect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: finalB })
+        })
+      ]);
+
+      const dataA = await resA.json();
+      const dataB = await resB.json();
+
+      if (!resA.ok) {
+        setCompareError(`Failed to inspect Site A (${finalA}): ${dataA.error || 'Error'}`);
+        return;
+      }
+      if (!resB.ok) {
+        setCompareError(`Failed to inspect Site B (${finalB}): ${dataB.error || 'Error'}`);
+        return;
+      }
+
+      setCompareResults({
+        siteA: dataA,
+        siteB: dataB
+      });
+    } catch (err: any) {
+      setCompareError(err?.message || 'Comparison scan failed.');
+    } finally {
+      setCompareLoading(false);
+    }
+  };
+
   const filteredTechnologies = result ? (
     activeCategory === 'all' 
       ? result.detected 
@@ -96,87 +145,224 @@ export default function Home() {
         <Navbar />
 
         {/* HERO SECTION */}
-        <section className="max-w-5xl mx-auto px-4 pt-14 pb-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-6">
-            <Binary className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Military-Grade Web Reconnaissance & Tech Inspection</span>
+        <section className="max-w-5xl mx-auto px-4 pt-12 pb-8 text-center">
+          {/* MODE TOGGLE SWITCHER */}
+          <div className="inline-flex items-center p-1 rounded-2xl bg-zinc-900 border border-zinc-800 mb-6 shadow-inner">
+            <button
+              onClick={() => setViewMode('single')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                viewMode === 'single'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span>Single Inspector</span>
+            </button>
+            <button
+              onClick={() => setViewMode('compare')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                viewMode === 'compare'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+            >
+              <Swords className="w-3.5 h-3.5 text-amber-400" />
+              <span>Compare Mode (Battle ⚔️)</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                NEW
+              </span>
+            </button>
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-3xl mx-auto">
-            Hackers-Grade <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">Tech Stack</span> Inspector
+            {viewMode === 'single' ? (
+              <>
+                Hackers-Grade <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent">Tech Stack</span> Inspector
+              </>
+            ) : (
+              <>
+                Side-by-Side <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">Stack Battle</span> Arena
+              </>
+            )}
           </h1>
 
           <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto mt-4 leading-relaxed">
-            Deconstruct any website's architecture — headers, cookies, CSP policies, frontend engines, backend APIs, CDNs, and security posture in seconds.
+            {viewMode === 'single'
+              ? "Deconstruct any website's architecture — headers, cookies, CSP policies, frontend engines, backend APIs, CDNs, and security posture in seconds."
+              : 'Pit any two websites head-to-head. Compare their frontend frameworks, backend engines, CDNs, security grades, and AI architecture verdicts.'}
           </p>
 
-          {/* SEARCH BAR */}
-          <div className="max-w-2xl mx-auto mt-8">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleScan();
-              }}
-              className="relative flex items-center"
-            >
-              <div className="absolute left-4 text-zinc-500 pointer-events-none">
-                <Globe className="w-5 h-5 text-indigo-400" />
+          {/* SINGLE MODE SEARCH BAR */}
+          {viewMode === 'single' && (
+            <div className="max-w-2xl mx-auto mt-8">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleScan();
+                }}
+                className="relative flex items-center"
+              >
+                <div className="absolute left-4 text-zinc-500 pointer-events-none">
+                  <Globe className="w-5 h-5 text-indigo-400" />
+                </div>
+
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="Enter domain (e.g., flipkart.com, netflix.com, apple.com)"
+                  className="w-full pl-12 pr-32 py-4 rounded-2xl bg-zinc-900/90 border border-zinc-700/80 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-white text-sm transition-all shadow-xl placeholder:text-zinc-500"
+                />
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="absolute right-2.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Infiltrating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Inspect</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* QUICK PILLS */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-zinc-500">
+                <span className="text-zinc-400 font-medium">Quick targets:</span>
+                {popularSites.map((site) => (
+                  <button
+                    key={site.name}
+                    onClick={() => handleScan(site.url)}
+                    disabled={loading}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-indigo-300 hover:border-zinc-700 transition-colors"
+                  >
+                    {site.name}
+                  </button>
+                ))}
               </div>
 
-              <input
-                type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="Enter domain (e.g., flipkart.com, netflix.com, shopify.com)"
-                className="w-full pl-12 pr-32 py-4 rounded-2xl bg-zinc-900/90 border border-zinc-700/80 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-white text-sm transition-all shadow-xl placeholder:text-zinc-500"
-              />
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="absolute right-2.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Infiltrating...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Inspect</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* QUICK PILLS */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-zinc-500">
-              <span className="text-zinc-400 font-medium">Quick targets:</span>
-              {popularSites.map((site) => (
-                <button
-                  key={site.name}
-                  onClick={() => handleScan(site.url)}
-                  disabled={loading}
-                  className="px-2.5 py-1 rounded-lg bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-indigo-300 hover:border-zinc-700 transition-colors"
-                >
-                  {site.name}
-                </button>
-              ))}
+              {error && (
+                <div className="max-w-2xl mx-auto mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-xs text-left">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                  <span>{error}</span>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* ERROR ALERT */}
-          {error && (
-            <div className="max-w-2xl mx-auto mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-xs text-left">
-              <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-              <span>{error}</span>
+          {/* COMPARE MODE DUAL INPUT */}
+          {viewMode === 'compare' && (
+            <div className="max-w-3xl mx-auto mt-8">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCompare();
+                }}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-11 gap-3 items-center">
+                  {/* Site A Input */}
+                  <div className="sm:col-span-5 relative">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                        A
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={urlA}
+                      onChange={(e) => setUrlA(e.target.value)}
+                      placeholder="e.g. zomato.com"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-700/80 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-white text-sm transition-all shadow-xl placeholder:text-zinc-500 font-mono"
+                    />
+                  </div>
+
+                  {/* VS Badge */}
+                  <div className="sm:col-span-1 flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-xs text-amber-400">
+                      VS
+                    </span>
+                  </div>
+
+                  {/* Site B Input */}
+                  <div className="sm:col-span-5 relative">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                        B
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={urlB}
+                      onChange={(e) => setUrlB(e.target.value)}
+                      placeholder="e.g. swiggy.com"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-700/80 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none text-white text-sm transition-all shadow-xl placeholder:text-zinc-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Compare Submit Button */}
+                <button
+                  type="submit"
+                  disabled={compareLoading}
+                  className="w-full sm:w-auto px-8 py-3 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:opacity-95 text-white font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 mx-auto disabled:opacity-50"
+                >
+                  {compareLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Simulating Stack Battle...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Swords className="w-4 h-4" />
+                      <span>Compare Tech Stacks ⚔️</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* QUICK BATTLE PRESETS */}
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs text-zinc-500">
+                <span className="text-zinc-400 font-medium">Popular Battles:</span>
+                {popularBattles.map((battle) => (
+                  <button
+                    key={battle.name}
+                    onClick={() => handleCompare(battle.a, battle.b)}
+                    disabled={compareLoading}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-900/60 border border-zinc-800 text-zinc-400 hover:text-amber-300 hover:border-zinc-700 transition-colors"
+                  >
+                    {battle.name}
+                  </button>
+                ))}
+              </div>
+
+              {compareError && (
+                <div className="max-w-2xl mx-auto mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3 text-xs text-left">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                  <span>{compareError}</span>
+                </div>
+              )}
             </div>
           )}
         </section>
 
-        {/* RESULTS SECTION */}
-        {result && (
+        {/* RESULTS SECTION: COMPARE MODE */}
+        {viewMode === 'compare' && compareResults && (
+          <section className="max-w-5xl mx-auto px-4 pb-20">
+            <CompareView siteA={compareResults.siteA} siteB={compareResults.siteB} />
+          </section>
+        )}
+
+        {/* RESULTS SECTION: SINGLE MODE */}
+        {viewMode === 'single' && result && (
           <section className="max-w-5xl mx-auto px-4 pb-20 space-y-8 animate-in fade-in duration-300">
             {/* SCAN SUMMARY & RECON STATS BAR */}
             <div className="rounded-2xl bg-zinc-900/50 border border-zinc-800/80 p-4 flex flex-wrap items-center justify-between gap-4 text-xs">
